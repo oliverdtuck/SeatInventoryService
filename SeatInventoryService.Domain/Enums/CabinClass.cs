@@ -5,5 +5,5 @@ public enum CabinClass
     Economy,
     PremiumEconomy,
     Business,
-    First,
+    First
 }

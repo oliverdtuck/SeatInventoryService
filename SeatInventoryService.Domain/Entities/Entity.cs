@@ -8,7 +8,13 @@ public abstract class Entity
 
     public IReadOnlyList<DomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
-    protected void RaiseDomainEvent(DomainEvent domainEvent) => _domainEvents.Add(domainEvent);
+    public void ClearDomainEvents()
+    {
+        _domainEvents.Clear();
+    }
 
-    public void ClearDomainEvents() => _domainEvents.Clear();
+    protected void RaiseDomainEvent(DomainEvent domainEvent)
+    {
+        _domainEvents.Add(domainEvent);
+    }
 }

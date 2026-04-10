@@ -1,5 +1,6 @@
 using SeatInventoryService.Domain.Enums;
 using SeatInventoryService.Domain.Events;
+using SeatInventoryService.Domain.ValueObjects;
 
 namespace SeatInventoryService.Domain.Entities;
 
@@ -10,6 +11,7 @@ public class Seat : Entity
     public int Number { get; private set; }
     public CabinClass CabinClass { get; private set; }
     public SeatStatus Status { get; private set; }
+    public SeatHold? ActiveHold { get; private set; }
     public uint Version { get; private set; }
 
     public static Seat Create(Guid flightId, int number, CabinClass cabinClass)
@@ -25,51 +27,55 @@ public class Seat : Entity
         };
     }
 
-    public void Hold(Guid passengerId, DateTime expiresAt)
+    public void Hold(Guid passengerId, TimeSpan holdDuration, TimeProvider timeProvider)
     {
-        if (Status != SeatStatus.Available)
-        {
-            throw new InvalidOperationException("Seat is not available.");
-        }
+        if (Status != SeatStatus.Available) throw new InvalidOperationException("Seat is not available.");
 
+        ActiveHold = SeatHold.Create(passengerId, holdDuration, timeProvider);
         Status = SeatStatus.Held;
-        
-        RaiseDomainEvent(new SeatHeld(Id, FlightId, passengerId, expiresAt));
+
+        RaiseDomainEvent(new SeatHeld(Id, FlightId, passengerId, ActiveHold.ExpiresAt));
     }
 
     public void Book(Guid passengerId)
     {
-        if (Status != SeatStatus.Held)
-        {
-            throw new InvalidOperationException("Seat must be held before booking.");
-        }
+        if (Status != SeatStatus.Held) throw new InvalidOperationException("Seat must be held before booking.");
 
+        ActiveHold = null;
         Status = SeatStatus.Booked;
-        
+
         RaiseDomainEvent(new SeatBooked(Id, FlightId, passengerId));
     }
 
     public void Release()
     {
-        if (Status == SeatStatus.Booked)
-        {
-            throw new InvalidOperationException("Cannot release a booked seat.");
-        }
+        RaiseDomainEvent(new SeatReleased(Id, FlightId, ClearHold()));
+    }
 
-        Status = SeatStatus.Available;
-        
-        RaiseDomainEvent(new SeatReleased(Id, FlightId));
+    public void ExpireHold()
+    {
+        RaiseDomainEvent(new SeatHoldExpired(Id, FlightId, ClearHold()));
     }
 
     public void MarkUnavailable()
     {
-        if (Status == SeatStatus.Booked)
-        {
-            throw new InvalidOperationException("Cannot mark a booked seat as unavailable.");
-        }
+        if (Status != SeatStatus.Available)
+            throw new InvalidOperationException("Only an available seat can be marked unavailable.");
 
         Status = SeatStatus.Unavailable;
-        
+
         RaiseDomainEvent(new SeatMarkedUnavailable(Id, FlightId));
+    }
+
+    private Guid ClearHold()
+    {
+        if (ActiveHold is null) throw new InvalidOperationException("Seat has no active hold.");
+
+        var passengerId = ActiveHold.PassengerId;
+
+        ActiveHold = null;
+        Status = SeatStatus.Available;
+
+        return passengerId;
     }
 }

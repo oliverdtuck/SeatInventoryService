@@ -5,5 +5,5 @@ public enum SeatStatus
     Available,
     Held,
     Booked,
-    Unavailable,
+    Unavailable
 }
