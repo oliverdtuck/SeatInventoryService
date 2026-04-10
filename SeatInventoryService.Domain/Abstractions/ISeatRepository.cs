@@ -1,6 +1,6 @@
 using SeatInventoryService.Domain.Entities;
 
-namespace SeatInventoryService.Domain.Repositories;
+namespace SeatInventoryService.Domain.Abstractions;
 
 public interface ISeatRepository : IRepository<Seat>
 {

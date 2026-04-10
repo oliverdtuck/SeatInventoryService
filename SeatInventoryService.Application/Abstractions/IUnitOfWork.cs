@@ -1,4 +1,4 @@
-namespace SeatInventoryService.Domain.Repositories;
+namespace SeatInventoryService.Application.Abstractions;
 
 public interface IUnitOfWork
 {

@@ -1,12 +1,12 @@
 using SeatInventoryService.Domain.Enums;
 using SeatInventoryService.Domain.Events;
+using SeatInventoryService.Domain.Exceptions;
 using SeatInventoryService.Domain.ValueObjects;
 
 namespace SeatInventoryService.Domain.Entities;
 
 public class Seat : Entity
 {
-    public Guid Id { get; private set; }
     public Guid FlightId { get; private set; }
     public int Number { get; private set; }
     public CabinClass CabinClass { get; private set; }
@@ -29,7 +29,7 @@ public class Seat : Entity
 
     public void Hold(Guid passengerId, TimeSpan holdDuration, TimeProvider timeProvider)
     {
-        if (Status != SeatStatus.Available) throw new InvalidOperationException("Seat is not available.");
+        if (Status != SeatStatus.Available) throw new SeatNotAvailableException(Id);
 
         ActiveHold = SeatHold.Create(passengerId, holdDuration, timeProvider);
         Status = SeatStatus.Held;
@@ -39,7 +39,7 @@ public class Seat : Entity
 
     public void Book(Guid passengerId)
     {
-        if (Status != SeatStatus.Held) throw new InvalidOperationException("Seat must be held before booking.");
+        if (Status != SeatStatus.Held) throw new SeatNotHeldException(Id);
 
         ActiveHold = null;
         Status = SeatStatus.Booked;
@@ -59,8 +59,7 @@ public class Seat : Entity
 
     public void MarkUnavailable()
     {
-        if (Status != SeatStatus.Available)
-            throw new InvalidOperationException("Only an available seat can be marked unavailable.");
+        if (Status != SeatStatus.Available) throw new SeatNotAvailableException(Id);
 
         Status = SeatStatus.Unavailable;
 
@@ -69,7 +68,7 @@ public class Seat : Entity
 
     private Guid ClearHold()
     {
-        if (ActiveHold is null) throw new InvalidOperationException("Seat has no active hold.");
+        if (ActiveHold is null) throw new SeatNotHeldException(Id);
 
         var passengerId = ActiveHold.PassengerId;
 
